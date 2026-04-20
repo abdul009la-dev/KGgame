@@ -1,1 +1,112 @@
+<!DOCTYPE html>
+<html lang="ky">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Онлайн: Адам, Жаныбар</title>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+    <style>
+        body { font-family: sans-serif; background: #f0f2f5; text-align: center; padding: 20px; }
+        .card { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); max-width: 400px; margin: auto; }
+        input { width: 90%; padding: 12px; margin: 10px 0; border: 2px solid #ddd; border-radius: 10px; font-size: 16px; }
+        button { width: 95%; padding: 15px; background: #3498db; color: white; border: none; border-radius: 10px; font-size: 18px; cursor: pointer; margin: 5px; }
+        #game-area { display: none; }
+        .letter { font-size: 50px; font-weight: bold; color: #e67e22; }
+        .score { font-size: 20px; color: #27ae60; font-weight: bold; }
+    </style>
+</head>
+<body>
 
+<div class="card" id="auth-area">
+    <h1>Онлайн Оюн</h1>
+    <input type="text" id="roomInput" placeholder="Бөлмө коду (мис: 1234)">
+    <button onclick="joinRoom()">Бөлмөгө кирүү / Түзүү</button>
+</div>
+
+<div class="card" id="game-area">
+    <div class="score">Упай: <span id="myScore">0</span></div>
+    <div class="letter" id="displayLetter">?</div>
+    <p id="status">Досуңузду күтүңүз...</p>
+    
+    <div id="inputs">
+        <input type="text" class="g-in" placeholder="Аты">
+        <input type="text" class="g-in" placeholder="Жаныбар">
+        <input type="text" class="g-in" placeholder="Өсүмдүк">
+        <input type="text" class="g-in" placeholder="Унаа">
+    </div>
+
+    <button id="startBtn" onclick="sendStart()" style="background: #2ecc71;">Тамга танда / Башта</button>
+    <button id="stopBtn" onclick="sendStop()" style="background: #e74c3c;" disabled>БҮТТҮМ!</button>
+</div>
+
+<script>
+    // БУЛ ЖЕРГЕ ФАЙРБЕЙЗДЕН АЛГАН КОНФИГУРАЦИЯНЫ КОЮҢУЗ
+    const firebaseConfig = {
+        apiKey: "СИЗДИН_API_KEY",
+        authDomain: "СИЗДИН_ID.firebaseapp.com",
+        databaseURL: "https://СИЗДИН_ID-default-rtdb.firebaseio.com",
+        projectId: "СИЗДИН_ID",
+        storageBucket: "СИЗДИН_ID.appspot.com",
+        messagingSenderId: "СИЗДИН_ID",
+        appId: "СИЗДИН_ID"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    let roomCode = "";
+    let currentLetter = "";
+
+    function joinRoom() {
+        roomCode = document.getElementById('roomInput').value;
+        if(!roomCode) return alert("Код жазыңыз!");
+
+        document.getElementById('auth-area').style.display = 'none';
+        document.getElementById('game-area').style.display = 'block';
+
+        // Бөлмөдөгү өзгөрүүлөрдү байкоо
+        db.ref('rooms/' + roomCode).on('value', (snapshot) => {
+            const data = snapshot.val();
+            if(data) {
+                if(data.letter) {
+                    currentLetter = data.letter;
+                    document.getElementById('displayLetter').textContent = currentLetter;
+                    document.getElementById('status').textContent = "Оюн жүрүп жатат!";
+                    document.getElementById('stopBtn').disabled = false;
+                }
+                if(data.status === "stopped") {
+                    finishRound();
+                }
+            }
+        });
+    }
+
+    function sendStart() {
+        const letters = "АБГДЕЖЗИКЛМНОПРСТУФХЦЧШЭЮЯ";
+        const randomLetter = letters[Math.floor(Math.random() * letters.length)];
+        db.ref('rooms/' + roomCode).set({
+            letter: randomLetter,
+            status: "playing"
+        });
+    }
+
+    function sendStop() {
+        db.ref('rooms/' + roomCode).update({ status: "stopped" });
+    }
+
+    function finishRound() {
+        document.getElementById('stopBtn').disabled = true;
+        let score = 0;
+        const inputs = document.querySelectorAll('.g-in');
+        inputs.forEach(input => {
+            if(input.value.trim().toUpperCase().startsWith(currentLetter)) {
+                score += 10;
+            }
+        });
+        alert("Оюн токтоду! Сиздин упайыңыз: " + score);
+        document.getElementById('myScore').textContent = score;
+    }
+</script>
+
+</body>
+</html>
